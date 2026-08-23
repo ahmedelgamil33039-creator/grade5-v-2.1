@@ -929,7 +929,7 @@
         }
 
         // ==========================================
-        // قفل أمني فوري ضد فتح نفس الحساب من جهازين في نفس الوقت
+        // حماية حاسمة ضد الفتح من جهازين في نفس الوقت
         // ==========================================
         function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
@@ -941,10 +941,10 @@
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            // الفحص الفوري عبر البث المشترك وقفل الجلسات النشطة
+            // الفحص الشامل للنشاط عبر الجلسة المحلية والمشاركة الفورية
             let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
-            if (activeSessions[studentId] && activeSessions[studentId] === true) {
-                showToast('تنبيه أمني صارم: هذا الحساب قيد الاختبار حالياً من جهاز آخر ولا يمكن فتحه من جهازين!', 'fa-shield-halved', true);
+            if (activeSessions[studentId] === true) {
+                showToast('تنبيه أمني صارم: هذا الحساب يؤدي الاختبار حالياً من جهاز آخر!', 'fa-shield-halved', true);
                 return;
             }
 
@@ -1010,13 +1010,10 @@
             isPreviewMode = false;
             isEndingQuiz = false;
 
-            // تسجيل قفل الجلسة فوراً لمنع أي دخول آخر
+            // تسجيل قفل الجلسة فوراً عند البدء
             let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
             activeSessions[currentStudent.id] = true;
             localStorage.setItem('active_quiz_sessions', JSON.stringify(activeSessions));
-
-            // إرسال إشارة بصرامة لأي جهاز آخر يحاول الفتح بنفس الاسم
-            sessionBroadcast.postMessage({ type: 'FORCE_LOGOUT', studentId: currentStudent.id });
 
             const isRandom = DB.config.isRandomOrder !== false;
 
@@ -1253,7 +1250,7 @@
             clearActiveAttemptState();
             isEndingQuiz = false;
 
-            // إزالة قفل الجلسة النشطة
+            // رفع قفل الجلسة النشطة
             if (currentStudent && currentStudent.id) {
                 let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
                 delete activeSessions[currentStudent.id];
@@ -1593,7 +1590,7 @@
             await saveDatabase();
             resetQuestionForm();
             renderAdminQuestions();
-            showToast('تم حفظ وتحديث السؤال بنجاح.', 'fa-cloud-arrow-up');
+            showToast('تم حفظ السؤال وتحديثه بنجاح.', 'fa-cloud-arrow-up');
         }
 
         function editQuestion(id) {
@@ -1931,7 +1928,7 @@
             }
 
             let csv = "\uFEFFمعرف الطالب,اسم الطالب,الدرجة,إجمالي الدرجات,النسبة المئوية,صواب,خطأ,غير مجاب,التاريخ والوقت\n";
-            DB.results.forEach(r => {
+            DB.results.results.forEach(r => {
                 csv += `"${r.studentId}","${r.studentName}","${r.score}","${r.totalPoints}","${r.percent}%","${r.correctCount}","${r.wrongCount}","${r.unansweredCount}","${r.dateTime}"\n`;
             });
 
