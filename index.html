@@ -436,13 +436,14 @@
                 <div id="admin-tab-bulk" class="admin-tab-content space-y-4 hidden text-right">
                     <div class="bg-slate-900/80 p-4 rounded-2xl border border-purple-500/30 space-y-3">
                         <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-layer-group ml-1"></i> استيراد الأسئلة الجماعي الذكي</h4>
+                            <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-layer-group ml-1"></i> الاستيراد الجماعي الذكي </h4>
                         </div>
-                        <p class="text-[11px] text-purple-200 leading-relaxed">
-                            انسخ والصق أسئلتك هنا (يجب ترك سطر فارغ بين كل سؤال والثاني).<br> يمكنك الفصل بين الخيارات بعلامة <code class="bg-slate-800 text-amber-300 px-1">|</code> أو باستخدام <code class="bg-slate-800 text-amber-300 px-1">أ) ب) ج) د)</code>. <br>
+                        <p class="text-[11px] text-purple-200 leading-relaxed mb-2">
+                            انسخ والصق أسئلتك هنا. الكود سيقرأ العناوين تلقائياً (مثل: ### اختيار من متعدد، ### أكمل العبارات الآتية، ### صوّب الخطأ) لتحديد نوع السؤال.<br> 
+                            يمكنك الفصل بين الخيارات بعلامة <code class="bg-slate-800 text-amber-300 px-1">|</code> أو باستخدام <code class="bg-slate-800 text-amber-300 px-1">أ) ب) ج) د)</code>. <br>
                             لإضافة صورة أضف سطر <code class="bg-slate-800 text-amber-300 px-1">الصورة: رابط</code>. لإضافة شرح أضف سطر <code class="bg-slate-800 text-amber-300 px-1">الشرح: التفسير</code>.
                         </p>
-                        <textarea id="admin-bulk-input" rows="8" placeholder="سؤال 1: عاصمة مصر هي؟&#10;الصورة: https://...&#10;أ) الإسكندرية | ب) القاهرة | ج) أسوان | د) الأقصر&#10;الإجابة: القاهرة&#10;الشرح: لأنها تحتوي على مقرات الحكم.&#10;&#10;سؤال 2: ..." class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono"></textarea>
+                        <textarea id="admin-bulk-input" rows="8" placeholder="### اختيار من متعدد&#10;سؤال: عاصمة مصر هي؟&#10;أ) الإسكندرية | ب) القاهرة | ج) أسوان | د) الأقصر&#10;الإجابة: القاهرة&#10;الشرح: لأنها تحتوي على مقرات الحكم.&#10;&#10;### أكمل العبارات الآتية&#10;سؤال: عاصمة مصر هي ........&#10;..." class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono"></textarea>
                         <button type="button" onclick="importBulkQuestions()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-2">
                             <i class="fa-solid fa-file-import"></i> استيراد وحفظ الأسئلة الآن
                         </button>
@@ -1107,7 +1108,9 @@
 
             document.getElementById('quiz-question-counter').innerText = `السؤال ${activeAttempt.currentIndex + 1} من ${activeAttempt.questions.length}`;
             document.getElementById('quiz-q-points').innerText = q.points;
-           document.getElementById('quiz-q-text').innerHTML = q.text;
+            
+            // استخدام innerHTML لقراءة أي تنسيقات مثل <u> أو <b>
+            document.getElementById('quiz-q-text').innerHTML = q.text;
 
             const typeBadge = getQuestionTypeBadge(q);
             const badgeEl = document.getElementById('quiz-q-type');
@@ -1497,7 +1500,7 @@
                 const div = document.createElement('div');
                 div.className = 'p-3 bg-slate-800/80 rounded-xl border border-purple-500/30 flex justify-between items-center text-xs';
                 
-                let correctLabel = Array.isArray(q.options) ? (q.options[q.correct] || 'غير محدد') : 'غير محدد';
+                let correctLabel = q.correctText || 'غير محدد';
 
                 div.innerHTML = `
                     <div class="overflow-hidden pr-2">
@@ -1523,7 +1526,7 @@
             const points = parseInt(document.getElementById('admin-q-points').value) || 1;
             const image = document.getElementById('admin-q-image').value.trim();
             const explanation = document.getElementById('admin-q-explanation').value.trim();
-            const correct = parseInt(document.getElementById('admin-q-correct').value);
+            let correct = parseInt(document.getElementById('admin-q-correct').value);
 
             if (!text) {
                 showToast('يرجى كتابة نص السؤال.', 'fa-circle-exclamation', true);
@@ -1531,8 +1534,12 @@
             }
 
             let options = [];
+            let correctTextVal = '';
+
             if (type === 'true_false') {
                 options = ['عبارة صحيحة', 'عبارة خاطئة'];
+                if (correct > 1) correct = 0;
+                correctTextVal = options[correct];
             } else {
                 const opt0 = document.getElementById('admin-q-opt-0').value.trim();
                 const opt1 = document.getElementById('admin-q-opt-1').value.trim();
@@ -1543,18 +1550,20 @@
                     return;
                 }
                 options = [opt0, opt1, opt2, opt3];
+                correctTextVal = options[correct];
             }
 
             if (qId) {
                 const targetQ = DB.questions.find(q => q.id === qId);
                 if (targetQ) {
                     targetQ.type = type; targetQ.text = text; targetQ.options = options;
-                    targetQ.correct = correct; targetQ.points = points; targetQ.image = image; targetQ.explanation = explanation;
+                    targetQ.correct = correct; targetQ.correctText = correctTextVal;
+                    targetQ.points = points; targetQ.image = image; targetQ.explanation = explanation;
                 }
             } else {
                 DB.questions.push({
-                    id: 'q_manual_' + Date.now(),
-                    type, text, options, correct, points, image, explanation
+                    id: 'q_manual_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    type, text, options, correct, correctText: correctTextVal, points, image, explanation
                 });
             }
 
@@ -1562,13 +1571,15 @@
             await saveDatabase();
             resetQuestionForm();
             renderAdminQuestions();
-            showToast('تم حفظ وتحديث السؤال بنجاح.', 'fa-cloud-arrow-up');
+            showToast('تم حفظ السؤال وتحديثه بنجاح.', 'fa-cloud-arrow-up');
         }
 
         function editQuestion(id) {
             const q = DB.questions.find(q => q.id === id);
             if (!q) return;
+            document.getElementById('q-form-title').innerText = 'تعديل السؤال';
             document.getElementById('admin-q-id').value = q.id;
+            
             document.getElementById('admin-q-type').value = q.type || 'mcq';
             handleQTypeChange();
             document.getElementById('admin-q-text').value = q.text || '';
@@ -1602,7 +1613,6 @@
                 showToast('لا توجد أسئلة لحذفها.', 'fa-circle-info');
                 return;
             }
-
             if (confirm('تحذير نهائي: هل أنت متأكد من حذف جميع الأسئلة بالكامل دفعة واحدة؟')) {
                 DB.questions = [];
                 clearActiveAttemptState();
@@ -1613,6 +1623,7 @@
         }
 
         function resetQuestionForm() {
+            document.getElementById('q-form-title').innerText = 'إضافة سؤال جديد يدوي';
             document.getElementById('admin-q-id').value = '';
             document.getElementById('admin-q-text').value = '';
             document.getElementById('admin-q-image').value = '';
@@ -1621,10 +1632,9 @@
             document.getElementById('admin-q-opt-1').value = '';
             document.getElementById('admin-q-opt-2').value = '';
             document.getElementById('admin-q-opt-3').value = '';
-            document.getElementById('admin-q-correct').value = '0';
         }
 
-     // ==========================================
+        // ==========================================
         // الاستيراد الجماعي الذكي (يقرأ العناوين لتصنيف الأسئلة)
         // ==========================================
         async function importBulkQuestions() {
@@ -1731,9 +1741,6 @@
             }
         }
 
-        // ==========================================
-        // إدارة الطلاب بالكامل
-        // ==========================================
         function renderAdminStudents() {
             const tbody = document.getElementById('admin-students-tbody');
             tbody.innerHTML = '';
@@ -1743,7 +1750,7 @@
                     <td class="p-2.5 font-mono">${s.id}</td>
                     <td class="p-2.5 font-bold text-white">${s.name}</td>
                     <td class="p-2.5 font-mono text-purple-300">${s.passcode}</td>
-                    <td class="p-2.5">${s.isBanned ? '<span class="text-amber-400 font-bold">مقيد / أتم الاختبار</span>' : '<span class="text-emerald-400">متاح</span>'}</td>
+                    <td class="p-2.5">${s.isBanned ? '<span class="text-amber-400 font-bold">مقيد / أتم الاختبار</span>' : '<span class="text-emerald-400">متاح للاختبار</span>'}</td>
                     <td class="p-2.5 flex gap-2">
                         <button type="button" onclick="editStudent('${s.id}')" class="text-xs text-purple-300 hover:underline cursor-pointer">تعديل</button>
                         <span class="text-slate-600">|</span>
@@ -1804,9 +1811,6 @@
             }
         }
 
-        // ==========================================
-        // إصلاح 5: فك الحظر (يمسح النتيجة السابقة فعلياً)
-        // ==========================================
         async function toggleBanStudent(id) {
             const s = DB.students.find(x => x.id === id);
             if (!s) return;
@@ -1822,7 +1826,6 @@
                 s.isBanned = false;
                 s.banReason = '';
                 s.banTime = '';
-                // الأهم: إزالة الطالب من مصفوفة النتائج عشان يقدر يدخل
                 DB.results = DB.results.filter(r => r.studentId !== id);
                 showToast(`تم فك الحظر ومسح النتيجة السابقة للطالب ${s.name} بنجاح.`, 'fa-circle-check');
             }
