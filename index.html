@@ -437,7 +437,7 @@
                             يمكنك الفصل بين الخيارات بعلامة <code class="bg-slate-800 text-amber-300 px-1">|</code> أو باستخدام <code class="bg-slate-800 text-amber-300 px-1">أ) ب) ج) د)</code>. <br>
                             لإضافة صورة أضف سطر <code class="bg-slate-800 text-amber-300 px-1">الصورة: رابط</code>. لإضافة شرح أضف سطر <code class="bg-slate-800 text-amber-300 px-1">الشرح: التفسير</code>.
                         </p>
-                        <textarea id="admin-bulk-input" rows="8" placeholder="### اختيار من متعدد&#10;سؤال: عاصمة مصر هي؟&#10;أ) الإسكندرية | ب) القاهرة | ج) أسوان | د) الأقصر&#10;الإجابة: القاهرة&#10;الشرح: لأنها تحتوي على مقرات الحكم.&#10;&#10;### أكمل العبارات الآتية&#10;سؤال: عاصمة مصر هي ........&#10;..." class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono"></textarea>
+                        <textarea id="admin-bulk-input" rows="8" placeholder="### اختيار من متعدد&#10;سؤال: عاصمة مصر هي؟&#10;أ) الإسكندرية | ب) القاهرة | ج) أسوان | د) الأقصر&#10;الإجابة: القاهرة&#10;الشرح: لأنها تحتوي على مقرات الحكم.&#10;&#10;### صوّب الخطأ&#10;سؤال: عاصمة مصر هي &quot;الإسكندرية&quot;.&#10;..." class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono"></textarea>
                         <button type="button" onclick="importBulkQuestions()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-2">
                             <i class="fa-solid fa-file-import"></i> استيراد وحفظ الأسئلة الآن
                         </button>
@@ -619,9 +619,6 @@
             }
         };
 
-        // ==========================================
-        // الأصوات
-        // ==========================================
         let audioCtx = null;
         function getAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -685,9 +682,6 @@
             if (e.target.closest('button') || e.target.closest('select')) playSound('click');
         }, { passive: true });
 
-        // ==========================================
-        // وظائف المساعدة العامة
-        // ==========================================
         function shuffleArray(array) {
             if (!Array.isArray(array)) return [];
             const arr = [...array];
@@ -730,7 +724,7 @@
 
         const DEFAULT_CONFIG = {
             testId: 'exam_soc_05_v40_final',
-            title: 'اختبار الصف الخامس الابتدائي ',
+            title: 'اختبار الصف الخامس الابتدائي',
             grade: 'الصف الخامس الابتدائي',
             subject: 'الدراسات الاجتماعية',
             teacherName: 'مس رشا دياب',
@@ -934,12 +928,6 @@
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
-            if (activeSessions[studentId] === true) {
-                showToast('تنبيه أمني صارم: هذا الحساب يؤدي الاختبار حالياً من جهاز آخر!', 'fa-shield-halved', true);
-                return;
-            }
-
             if (student.isBanned) {
                 openBlockedModal(student);
                 return;
@@ -1001,10 +989,6 @@
             closeReadyModal();
             isPreviewMode = false;
             isEndingQuiz = false;
-
-            let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
-            activeSessions[currentStudent.id] = true;
-            localStorage.setItem('active_quiz_sessions', JSON.stringify(activeSessions));
 
             const isRandom = DB.config.isRandomOrder !== false;
 
@@ -1100,7 +1084,7 @@
             if (q.type === 'true_false') {
                 return { label: '<i class="fa-solid fa-check-double ml-1"></i> صواب أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
             } else if (q.type === 'correct_error') {
-                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب ما تحته خط', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
+                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب الخطأ', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
             } else if (q.type === 'complete') {
                 return { label: '<i class="fa-solid fa-pen-to-square ml-1"></i> أكمل العبارات الآتية', classes: 'bg-sky-500/20 text-sky-300 border border-sky-500/40' };
             }
@@ -1237,12 +1221,6 @@
             activeAttempt.isCompleted = true;
             clearActiveAttemptState();
             isEndingQuiz = false;
-
-            if (currentStudent && currentStudent.id) {
-                let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
-                delete activeSessions[currentStudent.id];
-                localStorage.setItem('active_quiz_sessions', JSON.stringify(activeSessions));
-            }
 
             let totalPoints = 0;
             let earnedScore = 0;
