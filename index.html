@@ -1624,8 +1624,8 @@
             document.getElementById('admin-q-correct').value = '0';
         }
 
-        // ==========================================
-        // الاستيراد الجماعي الذكي والمحمي
+     // ==========================================
+        // الاستيراد الجماعي الذكي (يقرأ العناوين لتصنيف الأسئلة)
         // ==========================================
         async function importBulkQuestions() {
             const rawText = document.getElementById('admin-bulk-input').value;
@@ -1635,79 +1635,99 @@
                 return;
             }
 
-            // فصل الأسئلة بدقة عبر مسافة فارغة أو كلمة سؤال
-            const blocks = rawText.split(/\n\s*\n/).filter(b => b.trim().length > 0);
+            const cleanInput = rawText.replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '');
+            const lines = cleanInput.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             
             let newQs = [];
-            blocks.forEach((block, idx) => {
-                const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                if (lines.length < 2) return;
+            let currentQ = null;
+            let currentSectionType = 'mcq'; // النوع الافتراضي
 
-                let questionText = '';
-                let options = [];
-                let correctAns = '';
-                let explanation = '';
-                let image = '';
+            function finalizeAndPushQuestion(qObj, qsArray, sectionType) {
+                let cText = cleanOption(qObj.correctAns);
+                let cIdx = qObj.options.findIndex(o => normalizeMatch(o) === normalizeMatch(cText));
+                if (cIdx === -1) cIdx = qObj.options.findIndex(o => normalizeMatch(o).includes(normalizeMatch(cText)) || normalizeMatch(cText).includes(normalizeMatch(o)));
+                if (cIdx === -1) cIdx = 0;
 
-                lines.forEach(line => {
-                    const lLower = line.toLowerCase();
-                    if (lLower.startsWith('سؤال') || /^\d+[\-\.\)]/.test(line)) {
-                        questionText = line.replace(/^(سؤال\s*\d*\s*[:\-]?|\d+[\-\.\)])\s*/i, '').trim();
-                    } 
-                    else if (/^(أ|ب|ج|د|أ:|ب:|ج:|د:|\(أ\)|\(ب\)|\(ج\)|\(د\)|أ-|ب-|ج-|د-|أ\.|ب\.|ج\.|د\.)\s+/i.test(line) || line.includes('|')) {
+                // تنظيف السؤال النهائي من أي عبارات توجيهية ليظهر بشكل نظيف
+                let cleanQText = qObj.text.replace(/^(صو[بّ]\s*الخط[أا]\s*في\s*العبار[ةه]\s*التالي[ةه]|صو[بّ]\s*ما\s*تحت[ه]\s*خط|اكمل\s*العبارات\s*ال[اآ]تي[ةه]|اكمل\s*العبار[ةه]\s*التالي[ةه]|اختر\s*الاجاب[ةه]\s*الصحيح[ةه]|ضع\s*علام[ةه]\s*صح\s*او\s*خط[اأ])\s*[:\-]?\s*/ig, '').trim();
+
+                let type = sectionType;
+
+                // تأكيد إضافي بالرموز البصرية (لو العنوان نسيته في النسخ)
+                if (qObj.options.length === 2 && qObj.options.some(o => o.includes('صحيح') || o.includes('خطأ') || o.includes('خطا'))) {
+                    type = 'true_false';
+                } else if (/[_ـ]{2,}|\.{3,}|…/.test(cleanQText)) {
+                    type = 'complete';
+                } else if (cleanQText.includes('"') || cleanQText.includes('”') || cleanQText.includes('«')) {
+                    type = 'correct_error';
+                }
+
+                qsArray.push({
+                    id: `q_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                    type: type,
+                    text: cleanQText,
+                    options: qObj.options,
+                    correct: cIdx,
+                    correctText: qObj.options[cIdx] || qObj.options[0],
+                    points: 1,
+                    image: qObj.image || '',
+                    explanation: qObj.explanation || 'لا يوجد شرح إضافي.'
+                });
+            }
+
+            lines.forEach(line => {
+                const lLower = line.toLowerCase();
+                
+                // اكتشاف العناوين والأقسام بذكاء من النص المنسوخ
+                if (line.includes('اختيار من متعدد')) currentSectionType = 'mcq';
+                else if (line.includes('أكمل') || line.includes('اكمل')) currentSectionType = 'complete';
+                else if (line.includes('صوب') || line.includes('صوّب') || line.includes('الخطأ')) currentSectionType = 'correct_error';
+                else if (line.includes('صواب') || line.includes('صح أو خطأ') || line.includes('صح او خطا')) currentSectionType = 'true_false';
+
+                if (lLower.startsWith('سؤال') || /^\d+[\-\.\)]\s+/.test(line)) {
+                    if (currentQ && currentQ.text && currentQ.options.length >= 2 && currentQ.correctAns) {
+                        finalizeAndPushQuestion(currentQ, newQs, currentSectionType);
+                    }
+                    
+                    let qText = line.replace(/^(سؤال\s*\d*\s*[:\-]?|\d+[\-\.\)])\s*/i, '').trim();
+                    currentQ = { text: qText, options: [], correctAns: '', explanation: '', image: '' };
+                } 
+                else if (currentQ) {
+                    if (/^(أ|ب|ج|د|أ:|ب:|ج:|د:|\(أ\)|\(ب\)|\(ج\)|\(د\)|أ-|ب-|ج-|د-|أ\.|ب\.|ج\.|د\.)\s+/i.test(line) || line.includes('|')) {
                         if (line.includes('|')) {
-                            options = line.split('|').map(o => cleanOption(o)).filter(o => o);
+                            currentQ.options = line.split('|').map(o => cleanOption(o)).filter(o => o);
                         } else {
-                            options = line.split(/(?:[أبجدهو]\)|[أبجدهو]-|[أبجدهو]\.)/g).map(o => o.trim()).filter(o => o);
+                            currentQ.options = line.split(/(?:[أبجدهو]\)|[أبجدهو]-|[أبجدهو]\.)/g).map(o => o.trim()).filter(o => o);
                         }
                     }
                     else if (lLower.startsWith('الإجابة') || lLower.startsWith('الاجابة') || lLower.startsWith('الحل')) {
-                        correctAns = line.replace(/^(الإجابة|الاجابة|الحل)\s*[:\-]?\s*/i, '').trim();
+                        currentQ.correctAns = line.replace(/^(الإجابة|الاجابة|الحل)\s*[:\-]?\s*/i, '').trim();
                     }
                     else if (lLower.startsWith('الشرح') || lLower.startsWith('تفسير')) {
-                        explanation = line.replace(/^(الشرح|تفسير)\s*[:\-]?\s*/i, '').trim();
+                        currentQ.explanation = line.replace(/^(الشرح|تفسير)\s*[:\-]?\s*/i, '').trim();
                     }
                     else if (lLower.startsWith('صورة') || lLower.startsWith('الصورة') || lLower.startsWith('رابط')) {
-                        image = line.replace(/^(صورة|الصورة|رابط الصورة)\s*[:\-]?\s*/i, '').trim();
+                        currentQ.image = line.replace(/^(صورة|الصورة|رابط الصورة)\s*[:\-]?\s*/i, '').trim();
                     }
-                    else if (questionText === '') {
-                        questionText = line; 
+                    else if (currentQ.options.length === 0 && !currentQ.correctAns) {
+                        currentQ.text += ' ' + line;
                     }
-                });
-
-                if (questionText && options.length >= 2 && correctAns) {
-                    let cText = cleanOption(correctAns);
-                    let cIdx = options.findIndex(o => normalizeMatch(o) === normalizeMatch(cText));
-                    if (cIdx === -1) cIdx = options.findIndex(o => normalizeMatch(o).includes(normalizeMatch(cText)) || normalizeMatch(cText).includes(normalizeMatch(o)));
-                    if (cIdx === -1) cIdx = 0;
-
-                    let type = 'mcq';
-                    if (options.length === 2 && options.some(o => normalizeMatch(o).includes('صحيح') || normalizeMatch(o).includes('خطا'))) type = 'true_false';
-                    else if (questionText.includes('صوب') || questionText.includes('تحته خط')) type = 'correct_error';
-                    else if (questionText.includes('أكمل') || questionText.includes('اكمل') || questionText.includes('...')) type = 'complete';
-
-                    newQs.push({
-                        id: `q_bulk_${Date.now()}_${idx}`,
-                        type: type,
-                        text: questionText,
-                        options: options,
-                        correct: cIdx,
-                        points: 1,
-                        image: image,
-                        explanation: explanation || 'لا يوجد شرح إضافي.'
-                    });
                 }
             });
+
+            if (currentQ && currentQ.text && currentQ.options.length >= 2 && currentQ.correctAns) {
+                finalizeAndPushQuestion(currentQ, newQs, currentSectionType);
+            }
 
             if (newQs.length > 0) {
                 DB.questions = [...DB.questions, ...newQs];
                 await saveDatabase();
                 document.getElementById('admin-bulk-input').value = '';
                 renderAdminQuestions();
-                showToast(`تم استيراد ${newQs.length} سؤال بنجاح!`, 'fa-check');
+                showToast(`تم استيراد ${newQs.length} سؤال وتصنيفهم بنجاح!`, 'fa-check');
                 switchAdminTab('questions');
             } else {
-                showToast('فشل الاستيراد، يرجى التأكد من التنسيق والفصل بين الأسئلة.', 'fa-times', true);
+                showToast('فشل الاستيراد، يرجى التأكد من التنسيق.', 'fa-times', true);
             }
         }
 
