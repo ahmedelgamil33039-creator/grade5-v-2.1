@@ -1107,7 +1107,7 @@
 
             document.getElementById('quiz-question-counter').innerText = `السؤال ${activeAttempt.currentIndex + 1} من ${activeAttempt.questions.length}`;
             document.getElementById('quiz-q-points').innerText = q.points;
-            document.getElementById('quiz-q-text').innerText = q.text;
+           document.getElementById('quiz-q-text').innerHTML = q.text;
 
             const typeBadge = getQuestionTypeBadge(q);
             const badgeEl = document.getElementById('quiz-q-type');
