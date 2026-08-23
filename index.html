@@ -924,11 +924,45 @@
             localStorage.removeItem('grade5_active_attempt');
         }
 
-        function handleStartClick() {
+       function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
             if (!studentId) {
                 showToast('يرجى اختيار اسم الطالب أولاً.', 'fa-circle-exclamation', true);
                 return;
+            }
+
+            const student = DB.students.find(s => s.id === studentId);
+            if (!student) return;
+
+            // حماية ضد فتح نفس الحساب من أجهزة متعددة في نفس الوقت
+            const localActiveKey = `active_session_${studentId}`;
+            const isRunningElsewhere = sessionStorage.getItem(localActiveKey);
+            
+            if (isRunningElsewhere === 'true' && (!activeAttempt || activeAttempt.studentId !== studentId)) {
+                showToast('تنبيه أمني: هذا الحساب مفتوح بالفعل ويتم أداء الاختبار به من جلسة متصفح أخرى أو جهاز آخر!', 'fa-shield-halved', true);
+                return;
+            }
+
+            if (student.isBanned) {
+                openBlockedModal(student);
+                return;
+            }
+
+            if (DB.config.status !== 'published') {
+                showToast('الاختبار غير متاح حالياً للطلاب.', 'fa-lock', true);
+                return;
+            }
+
+            if (!DB.questions || DB.questions.length === 0) {
+                showToast('لا توجد أسئلة مضافة في الاختبار بعد!', 'fa-triangle-exclamation', true);
+                return;
+            }
+
+            currentStudent = student;
+            document.getElementById('passcode-student-label').innerText = `الطالب: ${student.name}`;
+            document.getElementById('student-passcode-input').value = '';
+            document.getElementById('modal-passcode').classList.remove('hidden');
+        }
             }
 
             const student = DB.students.find(s => s.id === studentId);
