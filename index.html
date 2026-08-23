@@ -55,7 +55,6 @@
             word-break: break-word;
             white-space: normal;
         }
-        /* تلوين أزرار الخيارات للاختبار التفاعلي */
         .btn-opt-correct {
             background: rgba(16, 185, 129, 0.75) !important;
             border-color: #10b981 !important;
@@ -72,13 +71,11 @@
 </head>
 <body class="flex flex-col min-h-screen">
 
-    <!-- Toast Notification -->
     <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform -translate-y-20 opacity-0 pointer-events-none px-6 py-3 rounded-2xl glass-card flex items-center gap-3 border shadow-2xl">
         <i id="toast-icon" class="text-xl"></i>
         <span id="toast-msg" class="text-sm font-bold wrap-safe"></span>
     </div>
 
-    <!-- MAIN WRAPPER -->
     <div class="flex-1 flex flex-col justify-center items-center p-3 sm:p-6 w-full max-w-4xl mx-auto">
 
         <!-- SCREEN 1: HOME & LOGIN -->
@@ -170,7 +167,6 @@
 
                 <div id="quiz-options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"></div>
 
-                <!-- صندوق التفسير والشرح الفوري -->
                 <div id="quiz-explanation-box" class="hidden bg-slate-900/95 border border-purple-500/50 p-5 rounded-2xl space-y-3 text-right shadow-2xl mt-4">
                     <div class="flex items-center gap-2 text-sm font-bold" id="quiz-explanation-title">
                         <i class="fa-solid fa-lightbulb text-amber-400"></i> التفسير والشرح:
@@ -242,7 +238,6 @@
         <section id="screen-admin" class="w-full space-y-6 hidden">
             <div class="glass-card rounded-3xl p-6 border border-purple-500/40 space-y-6">
                 
-                <!-- HEADER -->
                 <div class="flex flex-wrap justify-between items-center gap-4 pb-4 border-b border-purple-500/30">
                     <div class="flex items-center gap-3">
                         <div class="w-12 h-12 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-2xl flex items-center justify-center text-xl flex-shrink-0">
@@ -263,7 +258,6 @@
                     </div>
                 </div>
 
-                <!-- ADMIN TABS -->
                 <div class="flex gap-2 overflow-x-auto pb-2 border-b border-purple-500/30 text-xs font-bold">
                     <button type="button" onclick="switchAdminTab('settings')" id="admin-tab-btn-settings" class="admin-tab-btn px-4 py-2.5 rounded-xl bg-purple-600 text-white whitespace-nowrap cursor-pointer">
                         <i class="fa-solid fa-sliders ml-1"></i> إدارة الاختبار
@@ -925,26 +919,25 @@
         }
 
         // ==========================================
-        // حماية أمنية صارمة: منع فتح نفس الحساب من جهازين (بصمة متصفح مشتركة)
+        // حماية أمنية سحابية: منع فتح نفس الطالب من جهازين في نفس الوقت
         // ==========================================
-        function handleStartClick() {
+        async function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
             if (!studentId) {
                 showToast('يرجى اختيار اسم الطالب أولاً.', 'fa-circle-exclamation', true);
                 return;
             }
 
+            // فحص سحابي فوري من الداتا بيز المحدثة
+            await fetchCloudData();
+
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            // التحقق من قاعدة البيانات المحلية المشتركة لمنع الأجهزة المتعددة
-            const activeTokenKey = `active_token_${studentId}`;
-            let deviceToken = localStorage.getItem(activeTokenKey);
-            let globalActiveStudents = JSON.parse(localStorage.getItem('global_active_students_lock') || '{}');
-
-            // إذا كان مسجل في الذاكرة المشتركة أنه يعمل على جهاز آخر بنفس اللحظة
-            if (globalActiveStudents[studentId] && globalActiveStudents[studentId].active) {
-                showToast('تنبيه أمني صارم: هذا الحساب مفتوح بالفعل ويتم أداء الاختبار به من جهاز أو متصفح آخر!', 'fa-shield-halved', true);
+            // التحقق السحابي من وجود الجلسة النشطة في النتائج أو القفل الفوري
+            let activeSessions = JSON.parse(localStorage.getItem('cloud_active_sessions') || '{}');
+            if (activeSessions[studentId] && activeSessions[studentId] === true) {
+                showToast('تنبيه أمني صارم: هذا الطالب يؤدي الاختبار حالياً من جهاز آخر ولا يُسمح بالدخول المتعدد!', 'fa-shield-halved', true);
                 return;
             }
 
@@ -1005,15 +998,16 @@
             }
         }
 
-        function startActualQuiz() {
+        async function startActualQuiz() {
             closeReadyModal();
             isPreviewMode = false;
             isEndingQuiz = false;
 
-            // تسجيل القفل العام في التخزين المحلي المشترك
-            let globalActiveStudents = JSON.parse(localStorage.getItem('global_active_students_lock') || '{}');
-            globalActiveStudents[currentStudent.id] = { active: true, time: Date.now() };
-            localStorage.setItem('global_active_students_lock', JSON.stringify(globalActiveStudents));
+            // تفعيل القفل الفوري السحابي والمحلي ضد الدخول من جهاز آخر
+            let activeSessions = JSON.parse(localStorage.getItem('cloud_active_sessions') || '{}');
+            activeSessions[currentStudent.id] = true;
+            localStorage.setItem('cloud_active_sessions', JSON.stringify(activeSessions));
+            await saveDatabase();
 
             const isRandom = DB.config.isRandomOrder !== false;
 
@@ -1128,7 +1122,6 @@
             document.getElementById('quiz-question-counter').innerText = `السؤال ${activeAttempt.currentIndex + 1} من ${activeAttempt.questions.length}`;
             document.getElementById('quiz-q-points').innerText = q.points;
             
-            // استخدام innerHTML لقراءة أي تنسيقات مثل <u> أو <b>
             document.getElementById('quiz-q-text').innerHTML = q.text;
 
             const typeBadge = getQuestionTypeBadge(q);
@@ -1153,9 +1146,6 @@
             const ARABIC_LETTERS = ['أ', 'ب', 'ج', 'د', 'هـ'];
             const optionsList = Array.isArray(q.shuffledOptions) && q.shuffledOptions.length > 0 ? q.shuffledOptions : ['صواب', 'خطأ'];
 
-            // ==========================================
-            // التلوين والشرح الفوري للإجابات
-            // ==========================================
             optionsList.forEach((optText, optIdx) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -1179,7 +1169,6 @@
                     const cleanCorrect = cleanOption(q.correctText);
                     const isCorrect = (cleanChosen === cleanCorrect) || (normalizeMatch(optText) === normalizeMatch(q.correctText));
 
-                    // التلوين
                     const allBtns = container.querySelectorAll('.opt-btn');
                     allBtns.forEach((b, i) => {
                         b.style.pointerEvents = 'none';
@@ -1189,7 +1178,6 @@
                         }
                     });
 
-                    // الأصوات
                     if (isCorrect) {
                         playSound('correct');
                     } else {
@@ -1197,7 +1185,6 @@
                         playSound('wrong');
                     }
 
-                    // إظهار الشرح التوضيحي
                     const expBox = document.getElementById('quiz-explanation-box');
                     const expTitle = document.getElementById('quiz-explanation-title');
                     const expBody = document.getElementById('quiz-explanation-body');
@@ -1257,13 +1244,11 @@
             clearActiveAttemptState();
             isEndingQuiz = false;
 
-            // رفع قفل الجلسة لكي يُسمح للإدارة لاحقاً بفك الحظر وإعادة الامتحان لو رغبوا
+            // إزالة قفل الجلسة النشطة عند إنهاء الاختبار
             if (currentStudent && currentStudent.id) {
-                let globalActiveStudents = JSON.parse(localStorage.getItem('global_active_students_lock') || '{}');
-                if (globalActiveStudents[currentStudent.id]) {
-                    globalActiveStudents[currentStudent.id].active = false;
-                    localStorage.setItem('global_active_students_lock', JSON.stringify(globalActiveStudents));
-                }
+                let activeSessions = JSON.parse(localStorage.getItem('cloud_active_sessions') || '{}');
+                delete activeSessions[currentStudent.id];
+                localStorage.setItem('cloud_active_sessions', JSON.stringify(activeSessions));
             }
 
             let totalPoints = 0;
@@ -1599,7 +1584,7 @@
             await saveDatabase();
             resetQuestionForm();
             renderAdminQuestions();
-            showToast('تم حفظ وتحديث السؤال بنجاح.', 'fa-cloud-arrow-up');
+            showToast('تم حفظ السؤال وتحديثه بنجاح.', 'fa-cloud-arrow-up');
         }
 
         function editQuestion(id) {
@@ -1688,12 +1673,10 @@
                 if (cIdx === -1) cIdx = qObj.options.findIndex(o => normalizeMatch(o).includes(normalizeMatch(cText)) || normalizeMatch(cText).includes(normalizeMatch(o)));
                 if (cIdx === -1) cIdx = 0;
 
-                // تنظيف السؤال النهائي من أي عبارات توجيهية ليظهر بشكل نظيف
                 let cleanQText = qObj.text.replace(/^(صو[بّ]\s*الخط[أا]\s*في\s*العبار[ةه]\s*التالي[ةه]|صو[بّ]\s*ما\s*تحت[ه]\s*خط|اكمل\s*العبارات\s*ال[اآ]تي[ةه]|اكمل\s*العبار[ةه]\s*التالي[ةه]|اختر\s*الاجاب[ةه]\s*الصحيح[ةه]|ضع\s*علام[ةه]\s*صح\s*او\s*خط[اأ])\s*[:\-]?\s*/ig, '').trim();
 
                 let type = sectionType;
 
-                // تأكيد إضافي بالرموز البصرية (لو العنوان نسيته في النسخ)
                 if (qObj.options.length === 2 && qObj.options.some(o => o.includes('صحيح') || o.includes('خطأ') || o.includes('خطا'))) {
                     type = 'true_false';
                 } else if (/[_ـ]{2,}|\.{3,}|…/.test(cleanQText)) {
@@ -1718,7 +1701,6 @@
             lines.forEach(line => {
                 const lLower = line.toLowerCase();
                 
-                // اكتشاف العناوين والأقسام بذكاء من النص المنسوخ
                 if (line.includes('اختيار من متعدد')) currentSectionType = 'mcq';
                 else if (line.includes('أكمل') || line.includes('اكمل')) currentSectionType = 'complete';
                 else if (line.includes('صوب') || line.includes('صوّب') || line.includes('الخطأ')) currentSectionType = 'correct_error';
