@@ -610,7 +610,6 @@
        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhWts59cftnAZO_4HhummN6jA98B7a92M1N_dGUW3KK34ikgyzgaQ5Ghxa45g-sn90TQ/exec";
         const NEW_BANNER_URL = "https://i.postimg.cc/Y2FdWsdv/ghlaf.jpg";
 
-        // نظام بث حقيقي لحظي لمنع الأجهزة المتعددة فوراً
         const sessionBroadcast = new BroadcastChannel('quiz_session_lock_channel');
         sessionBroadcast.onmessage = function(event) {
             if (event.data && event.data.type === 'FORCE_LOGOUT' && currentStudent && event.data.studentId === currentStudent.id) {
@@ -847,9 +846,6 @@
             });
         }
 
-        // ==========================================
-        // نظام الخلط الفعلي للأسئلة
-        // ==========================================
         function forceDynamicShuffle() {
             if (!activeAttempt || activeAttempt.isCompleted || isPreviewMode) return false;
 
@@ -928,9 +924,6 @@
             localStorage.removeItem('grade5_active_attempt');
         }
 
-        // ==========================================
-        // حماية حاسمة ضد الفتح من جهازين في نفس الوقت
-        // ==========================================
         function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
             if (!studentId) {
@@ -941,7 +934,6 @@
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            // الفحص الشامل للنشاط عبر الجلسة المحلية والمشاركة الفورية
             let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
             if (activeSessions[studentId] === true) {
                 showToast('تنبيه أمني صارم: هذا الحساب يؤدي الاختبار حالياً من جهاز آخر!', 'fa-shield-halved', true);
@@ -1010,7 +1002,6 @@
             isPreviewMode = false;
             isEndingQuiz = false;
 
-            // تسجيل قفل الجلسة فوراً عند البدء
             let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
             activeSessions[currentStudent.id] = true;
             localStorage.setItem('active_quiz_sessions', JSON.stringify(activeSessions));
@@ -1105,9 +1096,6 @@
             startQuizTimer();
         }
 
-        // ==========================================
-        // أنواع الأسئلة
-        // ==========================================
         function getQuestionTypeBadge(q) {
             if (q.type === 'true_false') {
                 return { label: '<i class="fa-solid fa-check-double ml-1"></i> صواب أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
@@ -1250,7 +1238,6 @@
             clearActiveAttemptState();
             isEndingQuiz = false;
 
-            // رفع قفل الجلسة النشطة
             if (currentStudent && currentStudent.id) {
                 let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
                 delete activeSessions[currentStudent.id];
@@ -1655,9 +1642,6 @@
             document.getElementById('admin-q-correct').value = '0';
         }
 
-        // ==========================================
-        // الاستيراد الجماعي الذكي (يقرأ العناوين لتصنيف الأسئلة)
-        // ==========================================
         async function importBulkQuestions() {
             const rawText = document.getElementById('admin-bulk-input').value;
 
@@ -1671,7 +1655,7 @@
             
             let newQs = [];
             let currentQ = null;
-            let currentSectionType = 'mcq'; // النوع الافتراضي
+            let currentSectionType = 'mcq';
 
             function finalizeAndPushQuestion(qObj, qsArray, sectionType) {
                 let cText = cleanOption(qObj.correctAns);
@@ -1928,7 +1912,7 @@
             }
 
             let csv = "\uFEFFمعرف الطالب,اسم الطالب,الدرجة,إجمالي الدرجات,النسبة المئوية,صواب,خطأ,غير مجاب,التاريخ والوقت\n";
-            DB.results.results.forEach(r => {
+            DB.results.forEach(r => {
                 csv += `"${r.studentId}","${r.studentName}","${r.score}","${r.totalPoints}","${r.percent}%","${r.correctCount}","${r.wrongCount}","${r.unansweredCount}","${r.dateTime}"\n`;
             });
 
