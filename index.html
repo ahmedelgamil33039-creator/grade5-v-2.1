@@ -613,7 +613,7 @@
 
     <!-- SCRIPT ENGINE -->
     <script>
-       const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygBE_pXGaLd0In0xatcOQQfUSkB7nq_Eiq9cSiLQ2YcT8CrqoVBn7apps91VkxwJUi5A/exec";
+       const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhWts59cftnAZO_4HhummN6jA98B7a92M1N_dGUW3KK34ikgyzgaQ5Ghxa45g-sn90TQ/exec";
         const NEW_BANNER_URL = "https://i.postimg.cc/Y2FdWsdv/ghlaf.jpg";
 
         // ==========================================
@@ -925,7 +925,7 @@
         }
 
         // ==========================================
-        // حماية أمنية: منع فتح نفس الحساب من جهازين في نفس الوقت
+        // حماية أمنية صارمة: منع فتح نفس الحساب من جهازين (بصمة متصفح مشتركة)
         // ==========================================
         function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
@@ -937,12 +937,14 @@
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            // التحقق من الجلسة النشطة على جهاز آخر
-            const localActiveKey = `active_session_${studentId}`;
-            const isRunningElsewhere = sessionStorage.getItem(localActiveKey);
-            
-            if (isRunningElsewhere === 'true' && (!activeAttempt || activeAttempt.studentId !== studentId)) {
-                showToast('تنبيه أمني: هذا الحساب مفتوح بالفعل ويتم أداء الاختبار به من جلسة متصفح أخرى أو جهاز آخر!', 'fa-shield-halved', true);
+            // التحقق من قاعدة البيانات المحلية المشتركة لمنع الأجهزة المتعددة
+            const activeTokenKey = `active_token_${studentId}`;
+            let deviceToken = localStorage.getItem(activeTokenKey);
+            let globalActiveStudents = JSON.parse(localStorage.getItem('global_active_students_lock') || '{}');
+
+            // إذا كان مسجل في الذاكرة المشتركة أنه يعمل على جهاز آخر بنفس اللحظة
+            if (globalActiveStudents[studentId] && globalActiveStudents[studentId].active) {
+                showToast('تنبيه أمني صارم: هذا الحساب مفتوح بالفعل ويتم أداء الاختبار به من جهاز أو متصفح آخر!', 'fa-shield-halved', true);
                 return;
             }
 
@@ -1008,8 +1010,10 @@
             isPreviewMode = false;
             isEndingQuiz = false;
 
-            // تفعيل قفل الجلسة على هذا الجهاز
-            sessionStorage.setItem(`active_session_${currentStudent.id}`, 'true');
+            // تسجيل القفل العام في التخزين المحلي المشترك
+            let globalActiveStudents = JSON.parse(localStorage.getItem('global_active_students_lock') || '{}');
+            globalActiveStudents[currentStudent.id] = { active: true, time: Date.now() };
+            localStorage.setItem('global_active_students_lock', JSON.stringify(globalActiveStudents));
 
             const isRandom = DB.config.isRandomOrder !== false;
 
@@ -1252,6 +1256,15 @@
             activeAttempt.isCompleted = true;
             clearActiveAttemptState();
             isEndingQuiz = false;
+
+            // رفع قفل الجلسة لكي يُسمح للإدارة لاحقاً بفك الحظر وإعادة الامتحان لو رغبوا
+            if (currentStudent && currentStudent.id) {
+                let globalActiveStudents = JSON.parse(localStorage.getItem('global_active_students_lock') || '{}');
+                if (globalActiveStudents[currentStudent.id]) {
+                    globalActiveStudents[currentStudent.id].active = false;
+                    localStorage.setItem('global_active_students_lock', JSON.stringify(globalActiveStudents));
+                }
+            }
 
             let totalPoints = 0;
             let earnedScore = 0;
