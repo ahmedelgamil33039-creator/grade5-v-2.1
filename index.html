@@ -101,7 +101,7 @@
                 </div>
 
                 <h1 id="display-quiz-title" class="text-2xl sm:text-3xl font-black text-purple-200 text-glow leading-snug mb-2 wrap-safe">
-                    اختبار الصف الخامس الابتدائي 
+                    اختبار الصف الخامس الابتدائي في الدراسات الاجتماعية
                 </h1>
                 <div class="flex items-center justify-center gap-4 text-xs sm:text-sm text-purple-200/80 font-medium mb-6">
                     <span><i class="fa-solid fa-chalkboard-user text-purple-400 ml-1"></i> <span id="display-teacher-name">مس رشا دياب</span></span>
@@ -436,7 +436,7 @@
                 <div id="admin-tab-bulk" class="admin-tab-content space-y-4 hidden text-right">
                     <div class="bg-slate-900/80 p-4 rounded-2xl border border-purple-500/30 space-y-3">
                         <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-layer-group ml-1"></i> الاستيراد الجماعي الذكي </h4>
+                            <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-layer-group ml-1"></i> استيراد الأسئلة الجماعي الذكي</h4>
                         </div>
                         <p class="text-[11px] text-purple-200 leading-relaxed mb-2">
                             انسخ والصق أسئلتك هنا. الكود سيقرأ العناوين تلقائياً (مثل: ### اختيار من متعدد، ### أكمل العبارات الآتية، ### صوّب الخطأ) لتحديد نوع السؤال.<br> 
@@ -924,7 +924,10 @@
             localStorage.removeItem('grade5_active_attempt');
         }
 
-       function handleStartClick() {
+        // ==========================================
+        // حماية أمنية: منع فتح نفس الحساب من جهازين في نفس الوقت
+        // ==========================================
+        function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
             if (!studentId) {
                 showToast('يرجى اختيار اسم الطالب أولاً.', 'fa-circle-exclamation', true);
@@ -934,7 +937,7 @@
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            // حماية ضد فتح نفس الحساب من أجهزة متعددة في نفس الوقت
+            // التحقق من الجلسة النشطة على جهاز آخر
             const localActiveKey = `active_session_${studentId}`;
             const isRunningElsewhere = sessionStorage.getItem(localActiveKey);
             
@@ -942,31 +945,6 @@
                 showToast('تنبيه أمني: هذا الحساب مفتوح بالفعل ويتم أداء الاختبار به من جلسة متصفح أخرى أو جهاز آخر!', 'fa-shield-halved', true);
                 return;
             }
-
-            if (student.isBanned) {
-                openBlockedModal(student);
-                return;
-            }
-
-            if (DB.config.status !== 'published') {
-                showToast('الاختبار غير متاح حالياً للطلاب.', 'fa-lock', true);
-                return;
-            }
-
-            if (!DB.questions || DB.questions.length === 0) {
-                showToast('لا توجد أسئلة مضافة في الاختبار بعد!', 'fa-triangle-exclamation', true);
-                return;
-            }
-
-            currentStudent = student;
-            document.getElementById('passcode-student-label').innerText = `الطالب: ${student.name}`;
-            document.getElementById('student-passcode-input').value = '';
-            document.getElementById('modal-passcode').classList.remove('hidden');
-        }
-            }
-
-            const student = DB.students.find(s => s.id === studentId);
-            if (!student) return;
 
             if (student.isBanned) {
                 openBlockedModal(student);
@@ -1029,6 +1007,9 @@
             closeReadyModal();
             isPreviewMode = false;
             isEndingQuiz = false;
+
+            // تفعيل قفل الجلسة على هذا الجهاز
+            sessionStorage.setItem(`active_session_${currentStudent.id}`, 'true');
 
             const isRandom = DB.config.isRandomOrder !== false;
 
@@ -1125,9 +1106,9 @@
         // ==========================================
         function getQuestionTypeBadge(q) {
             if (q.type === 'true_false') {
-                return { label: '<i class="fa-solid fa-check-double ml-1"></i> صح أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
+                return { label: '<i class="fa-solid fa-check-double ml-1"></i> صواب أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
             } else if (q.type === 'correct_error') {
-                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب الخطأ ', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
+                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب ما تحته خط', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
             } else if (q.type === 'complete') {
                 return { label: '<i class="fa-solid fa-pen-to-square ml-1"></i> أكمل العبارات الآتية', classes: 'bg-sky-500/20 text-sky-300 border border-sky-500/40' };
             }
@@ -1546,7 +1527,7 @@
                     </div>
                     <div class="flex gap-2 flex-shrink-0">
                         <button type="button" onclick="editQuestion('${q.id}')" title="تعديل السؤال" class="text-purple-300 hover:text-purple-200 p-1.5 bg-purple-900/40 rounded-lg border border-purple-500/30 cursor-pointer"><i class="fa-solid fa-pen"></i></button>
-                        <button type="button" onclick="deleteQuestion('${q.id}')" title="حذف السؤال" class="text-red-400 hover:text-red-300 p-1.5 bg-red-900/40 rounded-lg border border-red-500/30 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+                        <button type="button" onclick="deleteQuestion('${q.id}')" title="حذف السؤال" class="text-red-400 hover:text-red-300 p-1.5 bg-red-900/40 rounded-lg border border-purple-500/30 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
                 list.appendChild(div);
@@ -1605,7 +1586,7 @@
             await saveDatabase();
             resetQuestionForm();
             renderAdminQuestions();
-            showToast('تم حفظ السؤال وتحديثه بنجاح.', 'fa-cloud-arrow-up');
+            showToast('تم حفظ وتحديث السؤال بنجاح.', 'fa-cloud-arrow-up');
         }
 
         function editQuestion(id) {
@@ -1647,6 +1628,7 @@
                 showToast('لا توجد أسئلة لحذفها.', 'fa-circle-info');
                 return;
             }
+
             if (confirm('تحذير نهائي: هل أنت متأكد من حذف جميع الأسئلة بالكامل دفعة واحدة؟')) {
                 DB.questions = [];
                 clearActiveAttemptState();
@@ -1666,6 +1648,7 @@
             document.getElementById('admin-q-opt-1').value = '';
             document.getElementById('admin-q-opt-2').value = '';
             document.getElementById('admin-q-opt-3').value = '';
+            document.getElementById('admin-q-correct').value = '0';
         }
 
         // ==========================================
@@ -1784,7 +1767,7 @@
                     <td class="p-2.5 font-mono">${s.id}</td>
                     <td class="p-2.5 font-bold text-white">${s.name}</td>
                     <td class="p-2.5 font-mono text-purple-300">${s.passcode}</td>
-                    <td class="p-2.5">${s.isBanned ? '<span class="text-amber-400 font-bold">مقيد / أتم الاختبار</span>' : '<span class="text-emerald-400">متاح للاختبار</span>'}</td>
+                    <td class="p-2.5">${s.isBanned ? '<span class="text-amber-400 font-bold">مقيد / أتم الاختبار</span>' : '<span class="text-emerald-400">متاح</span>'}</td>
                     <td class="p-2.5 flex gap-2">
                         <button type="button" onclick="editStudent('${s.id}')" class="text-xs text-purple-300 hover:underline cursor-pointer">تعديل</button>
                         <span class="text-slate-600">|</span>
