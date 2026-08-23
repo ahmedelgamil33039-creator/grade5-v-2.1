@@ -610,6 +610,16 @@
        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhWts59cftnAZO_4HhummN6jA98B7a92M1N_dGUW3KK34ikgyzgaQ5Ghxa45g-sn90TQ/exec";
         const NEW_BANNER_URL = "https://i.postimg.cc/Y2FdWsdv/ghlaf.jpg";
 
+        // نظام بث حقيقي لحظي لمنع الأجهزة المتعددة فوراً
+        const sessionBroadcast = new BroadcastChannel('quiz_session_lock_channel');
+        sessionBroadcast.onmessage = function(event) {
+            if (event.data && event.data.type === 'FORCE_LOGOUT' && currentStudent && event.data.studentId === currentStudent.id) {
+                alert('تنبيه أمني: تم تسجيل الدخول لهذا الحساب من جهاز آخر، سيتم إغلاق هذه الجلسة فوراً!');
+                localStorage.removeItem('grade5_active_attempt');
+                location.reload();
+            }
+        };
+
         // ==========================================
         // الأصوات
         // ==========================================
@@ -919,25 +929,22 @@
         }
 
         // ==========================================
-        // حماية أمنية سحابية: منع فتح نفس الطالب من جهازين في نفس الوقت
+        // قفل أمني فوري ضد فتح نفس الحساب من جهازين في نفس الوقت
         // ==========================================
-        async function handleStartClick() {
+        function handleStartClick() {
             const studentId = document.getElementById('select-student').value;
             if (!studentId) {
                 showToast('يرجى اختيار اسم الطالب أولاً.', 'fa-circle-exclamation', true);
                 return;
             }
 
-            // فحص سحابي فوري من الداتا بيز المحدثة
-            await fetchCloudData();
-
             const student = DB.students.find(s => s.id === studentId);
             if (!student) return;
 
-            // التحقق السحابي من وجود الجلسة النشطة في النتائج أو القفل الفوري
-            let activeSessions = JSON.parse(localStorage.getItem('cloud_active_sessions') || '{}');
+            // الفحص الفوري عبر البث المشترك وقفل الجلسات النشطة
+            let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
             if (activeSessions[studentId] && activeSessions[studentId] === true) {
-                showToast('تنبيه أمني صارم: هذا الطالب يؤدي الاختبار حالياً من جهاز آخر ولا يُسمح بالدخول المتعدد!', 'fa-shield-halved', true);
+                showToast('تنبيه أمني صارم: هذا الحساب قيد الاختبار حالياً من جهاز آخر ولا يمكن فتحه من جهازين!', 'fa-shield-halved', true);
                 return;
             }
 
@@ -998,16 +1005,18 @@
             }
         }
 
-        async function startActualQuiz() {
+        function startActualQuiz() {
             closeReadyModal();
             isPreviewMode = false;
             isEndingQuiz = false;
 
-            // تفعيل القفل الفوري السحابي والمحلي ضد الدخول من جهاز آخر
-            let activeSessions = JSON.parse(localStorage.getItem('cloud_active_sessions') || '{}');
+            // تسجيل قفل الجلسة فوراً لمنع أي دخول آخر
+            let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
             activeSessions[currentStudent.id] = true;
-            localStorage.setItem('cloud_active_sessions', JSON.stringify(activeSessions));
-            await saveDatabase();
+            localStorage.setItem('active_quiz_sessions', JSON.stringify(activeSessions));
+
+            // إرسال إشارة بصرامة لأي جهاز آخر يحاول الفتح بنفس الاسم
+            sessionBroadcast.postMessage({ type: 'FORCE_LOGOUT', studentId: currentStudent.id });
 
             const isRandom = DB.config.isRandomOrder !== false;
 
@@ -1244,11 +1253,11 @@
             clearActiveAttemptState();
             isEndingQuiz = false;
 
-            // إزالة قفل الجلسة النشطة عند إنهاء الاختبار
+            // إزالة قفل الجلسة النشطة
             if (currentStudent && currentStudent.id) {
-                let activeSessions = JSON.parse(localStorage.getItem('cloud_active_sessions') || '{}');
+                let activeSessions = JSON.parse(localStorage.getItem('active_quiz_sessions') || '{}');
                 delete activeSessions[currentStudent.id];
-                localStorage.setItem('cloud_active_sessions', JSON.stringify(activeSessions));
+                localStorage.setItem('active_quiz_sessions', JSON.stringify(activeSessions));
             }
 
             let totalPoints = 0;
@@ -1584,7 +1593,7 @@
             await saveDatabase();
             resetQuestionForm();
             renderAdminQuestions();
-            showToast('تم حفظ السؤال وتحديثه بنجاح.', 'fa-cloud-arrow-up');
+            showToast('تم حفظ وتحديث السؤال بنجاح.', 'fa-cloud-arrow-up');
         }
 
         function editQuestion(id) {
