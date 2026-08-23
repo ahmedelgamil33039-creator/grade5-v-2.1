@@ -1091,9 +1091,9 @@
         // ==========================================
         function getQuestionTypeBadge(q) {
             if (q.type === 'true_false') {
-                return { label: '<i class="fa-solid fa-check-double ml-1"></i> صواب أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
+                return { label: '<i class="fa-solid fa-check-double ml-1"></i> صح أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
             } else if (q.type === 'correct_error') {
-                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب ما تحته خط', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
+                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب الخطأ ', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
             } else if (q.type === 'complete') {
                 return { label: '<i class="fa-solid fa-pen-to-square ml-1"></i> أكمل العبارات الآتية', classes: 'bg-sky-500/20 text-sky-300 border border-sky-500/40' };
             }
