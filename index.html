@@ -610,15 +610,6 @@
        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhWts59cftnAZO_4HhummN6jA98B7a92M1N_dGUW3KK34ikgyzgaQ5Ghxa45g-sn90TQ/exec";
         const NEW_BANNER_URL = "https://i.postimg.cc/Y2FdWsdv/ghlaf.jpg";
 
-        const sessionBroadcast = new BroadcastChannel('quiz_session_lock_channel');
-        sessionBroadcast.onmessage = function(event) {
-            if (event.data && event.data.type === 'FORCE_LOGOUT' && currentStudent && event.data.studentId === currentStudent.id) {
-                alert('تنبيه أمني: تم تسجيل الدخول لهذا الحساب من جهاز آخر، سيتم إغلاق هذه الجلسة فوراً!');
-                localStorage.removeItem('grade5_active_attempt');
-                location.reload();
-            }
-        };
-
         let audioCtx = null;
         function getAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1013,7 +1004,9 @@
                 };
             });
 
-            if (isRandom) preparedQuestions = shuffleArray(preparedQuestions);
+            if (isRandom) {
+                preparedQuestions = shuffleArray(preparedQuestions);
+            }
 
             activeAttempt = {
                 attemptId: 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
