@@ -458,12 +458,24 @@
                     </div>
                 </div>
 
-                <!-- TAB 4: MANUAL GRADING FOR ESSAY -->
+                <!-- TAB 4: MANUAL GRADING FOR ESSAY (MODAL VIEW FOR SPACE SAVING) -->
                 <div id="admin-tab-grading" class="admin-tab-content space-y-4 hidden text-right">
                     <div class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-purple-500/30">
                         <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-clipboard-check ml-1"></i> تصحيح إجابات الأسئلة المقالية للطلاب (<span id="pending-grading-count">0</span>)</h4>
                     </div>
-                    <div id="admin-grading-list" class="space-y-4 max-h-[600px] overflow-y-auto pr-1"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-right text-slate-300">
+                            <thead class="bg-slate-900 border-b border-purple-500/30 text-purple-300">
+                                <tr>
+                                    <th class="p-3">اسم الطالب</th>
+                                    <th class="p-3">تاريخ التسليم</th>
+                                    <th class="p-3">الحالة</th>
+                                    <th class="p-3">إجراء التصحيح</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800" id="admin-grading-tbody"></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- TAB 5: STUDENTS -->
@@ -503,7 +515,7 @@
 
                 <!-- TAB 6: BANNED / SUBMISSIONS -->
                 <div id="admin-tab-banned" class="admin-tab-content space-y-4 hidden text-right">
-                    <h4 class="font-bold text-sm text-amber-400"><i class="fa-solid fa-shield-halved ml-1"></i> متابعة أداء الطلاب وحالة الاختبارات</h4>
+                    <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-shield-halved ml-1"></i> متابعة أداء الطلاب وحالة الاختبارات</h4>
                     <p class="text-[11px] text-slate-400 mb-2">يمكنك متابعة الطلاب الذين أتموا الاختبار، أو مسح تسليماتهم للسماح لهم بإعادة الاختبار.</p>
                     <div class="overflow-x-auto">
                         <table class="w-full text-xs text-right text-slate-300">
@@ -525,7 +537,7 @@
                     <div class="flex flex-wrap justify-between items-center gap-2">
                         <h4 class="font-bold text-sm text-purple-300">سجل نتائج طلاب الصف الخامس</h4>
                         <div class="flex gap-2">
-                            <button type="button" onclick="clearAllResults()" class="bg-red-600/30 hover:bg-red-600 text-red-200 border border-red-500/40 font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer">
+                            <button type="button" onclick="clearAllResults()" class="bg-red-600/30 hover:bg-red-600 text-red-200 border border-purple-500/40 font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer">
                                 <i class="fa-solid fa-trash-can ml-1"></i> مسح جميع النتائج
                             </button>
                             <button type="button" onclick="exportResultsCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer">
@@ -595,6 +607,21 @@
             <div class="flex gap-2">
                 <button type="button" onclick="closeAdminModal()" class="w-1/2 bg-slate-800 text-slate-300 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
                 <button type="button" onclick="verifyAdminLogin()" class="w-1/2 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl text-xs font-bold cursor-pointer">دخول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: GRADE ESSAY MODAL (SPACE SAVING) -->
+    <div id="modal-grade-essay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="glass-modal rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 border border-purple-500/40 shadow-2xl text-right">
+            <div class="flex justify-between items-center border-b pb-3 border-purple-500/30">
+                <h3 class="font-bold text-lg text-white" id="grade-modal-student-name">تصحيح إجابات الطالب</h3>
+                <button type="button" onclick="closeGradeModal()" class="text-slate-400 hover:text-white text-sm cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="grade-modal-content" class="space-y-4"></div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-purple-500/30">
+                <button type="button" onclick="closeGradeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+                <button type="button" id="grade-modal-save-btn" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg cursor-pointer">حفظ ونشر النتيجة للطالب</button>
             </div>
         </div>
     </div>
@@ -694,6 +721,18 @@
                 .replace(/[^\w\s\u0600-\u06FF]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
+        }
+
+        function cleanQuestionTextDisplay(text) {
+            if (!text) return '';
+            let s = text.toString().trim();
+            s = s.replace(/[\u200B-\u200F\u202A-\u202E\uFEFF]/g, '').trim();
+            let prev = '';
+            while (prev !== s) {
+                prev = s;
+                s = s.replace(/^[\(\[\{【（\s]*(?:\d+[\-\.\)]\s*|سؤال\s*\d*|س\s*\d*|اختيار من متعدد|اختر الإجابة الصحيحة|اختر من متعدد|اختر|أكمل العبارات الآتية|أكمل العبارات|أكمل الجمل|أكمل|صوّب الخطأ|صوب الخطأ|صوّب ما تحته خط|صوب ما تحته خط|صوّب|صوب|صح أو خطأ|صواب أو خطأ|صح وخطأ|صواب وخطأ|صح أم خطأ|مقالي|سؤال مقالي|أسئلة مقالية)[\)\]\}】）\s]*[:\-–—=.]*\s*/i, '').trim();
+            }
+            return s;
         }
 
         function handleQuestionImageUpload(event) {
@@ -1009,7 +1048,7 @@
                     div.className = `p-3 rounded-2xl border text-xs leading-relaxed wrap-safe ${isCorr ? 'bg-emerald-900/20 border-emerald-600/40' : 'bg-red-900/20 border-red-600/40'}`;
                     div.innerHTML = `
                         <div class="flex justify-between font-bold mb-1 wrap-safe">
-                            <span class="text-white wrap-safe">س${idx + 1}: ${item.questionText}</span>
+                            <span class="text-white wrap-safe">س${idx + 1}: ${cleanQuestionTextDisplay(item.questionText)}</span>
                             <span class="${isCorr ? 'text-emerald-400' : 'text-red-400'} flex-shrink-0">${item.pointsEarned} / ${item.pointsPossible} درجات</span>
                         </div>
                         <div class="text-purple-200 wrap-safe">إجابتك: <span class="font-bold ${isCorr ? 'text-emerald-300' : 'text-red-300'}">${item.studentAnsText}</span></div>
@@ -1034,7 +1073,7 @@
                     div.className = 'p-3 rounded-2xl border border-purple-500/30 bg-slate-900/90 text-xs space-y-1.5 wrap-safe';
                     div.innerHTML = `
                         <div class="flex justify-between font-bold text-white wrap-safe">
-                            <span class="wrap-safe">مقالي (${idx + 1}): ${q.text}</span>
+                            <span class="wrap-safe">مقالي (${idx + 1}): ${cleanQuestionTextDisplay(q.text)}</span>
                             <span class="text-amber-400 font-mono flex-shrink-0">الدرجة: ${feedback.score} / ${q.points}</span>
                         </div>
                         <div class="text-purple-200 wrap-safe bg-slate-950 p-2 rounded-xl"><strong>إجابتك:</strong> ${ans}</div>
@@ -1066,7 +1105,7 @@
 
                 return {
                     questionId: q.id || `q_${Date.now()}_${idx}`,
-                    text: q.text || '',
+                    text: cleanQuestionTextDisplay(q.text || ''),
                     type: q.type || 'mcq',
                     points: q.points || 1,
                     image: q.image || '',
@@ -1115,7 +1154,7 @@
                 let correctIdx = typeof q.correct === 'number' ? q.correct : 0;
                 return {
                     questionId: q.id || `q_preview_${idx}`,
-                    text: q.text || '',
+                    text: cleanQuestionTextDisplay(q.text || ''),
                     type: q.type || 'mcq',
                     points: q.points || 1,
                     image: q.image || '',
@@ -1167,7 +1206,7 @@
             document.getElementById('quiz-question-counter').innerText = `السؤال ${activeAttempt.currentIndex + 1} من ${activeAttempt.questions.length}`;
             document.getElementById('quiz-q-points').innerText = q.points;
             
-            document.getElementById('quiz-q-text').innerHTML = q.text;
+            document.getElementById('quiz-q-text').innerHTML = cleanQuestionTextDisplay(q.text);
 
             const typeBadge = getQuestionTypeBadge(q);
             const badgeEl = document.getElementById('quiz-q-type');
@@ -1374,6 +1413,7 @@
                 DB.results.push(resultObj);
             }
 
+            let lastEssaySub = null;
             if (essayQuestions.length > 0) {
                 let essayAnswersMap = {};
                 essayQuestions.forEach(q => {
@@ -1384,7 +1424,7 @@
                 essayQuestions.forEach(q => maxEssayPoints += q.points);
 
                 if (!DB.essaySubmissions) DB.essaySubmissions = [];
-                DB.essaySubmissions.push({
+                lastEssaySub = {
                     id: 'esub_' + Date.now(),
                     studentId: currentStudent.id,
                     studentName: currentStudent.name,
@@ -1394,7 +1434,8 @@
                     totalEarned: 0,
                     maxTotal: maxEssayPoints,
                     feedback: {}
-                });
+                };
+                DB.essaySubmissions.push(lastEssaySub);
             }
 
             if (!isPreviewMode) {
@@ -1403,59 +1444,7 @@
 
             if (percent >= 75) playSound('fanfare');
 
-            displayResultScreen(resultObj, essayQuestions.length > 0);
-        }
-
-        function displayResultScreen(result, hasEssay = false) {
-            document.getElementById('result-score').innerText = `${result.score} / ${result.totalPoints}`;
-            document.getElementById('result-percent').innerText = `النسبة المئوية: ${result.percent}%`;
-            document.getElementById('result-stat-correct').innerText = result.correctCount;
-            document.getElementById('result-stat-wrong').innerText = result.wrongCount;
-            document.getElementById('result-stat-unanswered').innerText = result.unansweredCount;
-            document.getElementById('result-stat-total').innerText = result.details.length;
-
-            const headline = document.getElementById('result-headline');
-            const msg = document.getElementById('result-message');
-            const iconWrap = document.getElementById('result-status-icon');
-
-            if (hasEssay) {
-                headline.innerText = 'تم تسليم الاختبار بنجاح! 📝';
-                msg.innerText = 'تم حفظ إجاباتك الموضوعية والمقالية. الأسئلة المقالية بانتظار المراجعة والتصحيح اليدوي من قِبل مس رشا.';
-                iconWrap.className = 'w-20 h-20 rounded-3xl mx-auto flex items-center justify-center text-3xl shadow-xl bg-amber-500/20 text-amber-400 border border-amber-500/40';
-            } else if (result.percent >= 85) {
-                headline.innerText = 'أداء باهر وممتاز يا بطل! 🌟';
-                msg.innerText = 'ما شاء الله عليك، إجاباتك تدل على فهم واستيعاب رائع لمنهج الصف الخامس!';
-                iconWrap.className = 'w-20 h-20 rounded-3xl mx-auto flex items-center justify-center text-3xl shadow-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
-            } else {
-                headline.innerText = 'نتيجة جيدة جداً، واصل التقدم! 👏';
-                msg.innerText = 'مستوى طيب ومجهود تشكر عليه، بقليل من المراجعة ستصل للدرجة النهائية.';
-                iconWrap.className = 'w-20 h-20 rounded-3xl mx-auto flex items-center justify-center text-3xl shadow-xl bg-purple-500/20 text-purple-300 border border-purple-500/40';
-            }
-
-            const breakdown = document.getElementById('result-breakdown');
-            breakdown.innerHTML = '';
-
-            result.details.forEach((item, idx) => {
-                const div = document.createElement('div');
-                const isCorr = item.status === 'correct';
-                const isUnans = item.status === 'unanswered';
-
-                div.className = `p-3 rounded-2xl border text-xs leading-relaxed wrap-safe ${
-                    isCorr ? 'bg-emerald-900/20 border-emerald-600/40' : (isUnans ? 'bg-amber-900/20 border-amber-600/40' : 'bg-red-900/20 border-red-600/40')
-                }`;
-
-                div.innerHTML = `
-                    <div class="flex justify-between font-bold mb-1 wrap-safe">
-                        <span class="text-white wrap-safe">س${idx + 1}: ${item.questionText}</span>
-                        <span class="${isCorr ? 'text-emerald-400' : 'text-red-400'} flex-shrink-0">${item.pointsEarned} / ${item.pointsPossible} درجات</span>
-                    </div>
-                    <div class="text-purple-200 wrap-safe">إجابتك: <span class="font-bold ${isCorr ? 'text-emerald-300' : 'text-red-300'}">${item.studentAnsText}</span></div>
-                    ${!isCorr ? `<div class="text-emerald-400 mt-0.5 font-bold wrap-safe">الإجابة الصحيحة: ${item.correctAnsText}</div>` : ''}
-                `;
-                breakdown.appendChild(div);
-            });
-
-            navigateTo('screen-result');
+            displayComprehensiveStudentResult(resultObj, lastEssaySub);
         }
 
         // --- ADMIN PANEL LOGIC ---
@@ -1619,7 +1608,7 @@
 
                 div.innerHTML = `
                     <div class="overflow-hidden pr-2 wrap-safe">
-                        <span class="font-bold text-white block mb-1 wrap-safe">س${idx + 1} [${qTypeLabel}]: ${q.text}</span>
+                        <span class="font-bold text-white block mb-1 wrap-safe">س${idx + 1} [${qTypeLabel}]: ${cleanQuestionTextDisplay(q.text)}</span>
                         <div class="flex items-center gap-2">
                             <span class="text-emerald-400 font-bold wrap-safe"><i class="fa-solid fa-circle-check ml-1"></i> ${correctLabel}</span>
                             <span class="text-purple-300 font-semibold">(${q.points || 1} درجات)</span>
@@ -1637,7 +1626,7 @@
         async function saveQuestion() {
             const qId = document.getElementById('admin-q-id').value;
             const type = document.getElementById('admin-q-type').value;
-            let text = document.getElementById('admin-q-text').value.trim();
+            let text = cleanQuestionTextDisplay(document.getElementById('admin-q-text').value.trim());
             const points = parseInt(document.getElementById('admin-q-points').value) || 1;
             const image = document.getElementById('admin-q-image').value.trim();
             const explanation = document.getElementById('admin-q-explanation').value.trim();
@@ -1700,7 +1689,7 @@
             
             document.getElementById('admin-q-type').value = q.type || 'mcq';
             handleQTypeChange();
-            document.getElementById('admin-q-text').value = q.text || '';
+            document.getElementById('admin-q-text').value = cleanQuestionTextDisplay(q.text || '');
             document.getElementById('admin-q-points').value = q.points || 1;
             document.getElementById('admin-q-image').value = q.image || '';
             document.getElementById('admin-q-explanation').value = q.explanation || '';
@@ -1770,12 +1759,13 @@
 
             function finalizeAndPush(qObj, qsArray, secType) {
                 if (!qObj || !qObj.text) return;
+                let cleanQText = cleanQuestionTextDisplay(qObj.text);
                 let type = secType;
                 if (type === 'essay') {
                     qsArray.push({
                         id: `q_bulk_essay_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                         type: 'essay',
-                        text: qObj.text,
+                        text: cleanQText,
                         points: qObj.points || 5,
                         image: qObj.image || '',
                         explanation: qObj.modelAnswer || 'تصحيح يدوي',
@@ -1789,7 +1779,7 @@
                     qsArray.push({
                         id: `q_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
                         type: type,
-                        text: qObj.text,
+                        text: cleanQText,
                         options: qObj.options,
                         correct: cIdx,
                         correctText: qObj.options[cIdx] || qObj.options[0],
@@ -1857,73 +1847,93 @@
             }
         }
 
-        // --- MANUAL ESSAY GRADING IN ADMIN ---
+        // --- MANUAL ESSAY GRADING IN ADMIN (MODAL VIEW FOR SPACE SAVING) ---
         function renderAdminGrading() {
-            const container = document.getElementById('admin-grading-list');
+            const container = document.getElementById('admin-grading-tbody');
+            if (!container) return;
             if (!DB.essaySubmissions) DB.essaySubmissions = [];
             const pendingCount = DB.essaySubmissions.filter(s => !s.graded).length;
-            document.getElementById('pending-grading-count').innerText = pendingCount;
+            const badge = document.getElementById('pending-grading-count');
+            if (badge) badge.innerText = pendingCount;
             container.innerHTML = '';
 
             if (DB.essaySubmissions.length === 0) {
-                container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">لا توجد إجابات مقالية بانتظار التصحيح.</div>';
+                container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">لا توجد إجابات مقالية بانتظار التصحيح حتى الآن.</td></tr>';
                 return;
             }
 
             DB.essaySubmissions.forEach(sub => {
-                let essayHtml = '';
-                DB.questions.filter(q => q.type === 'essay').forEach((q, qIdx) => {
-                    const studentAns = sub.answers[q.id] || 'لم تتم الإجابة';
-                    const curScore = sub.feedback && sub.feedback[q.id] ? sub.feedback[q.id].score : '';
-                    const curNote = sub.feedback && sub.feedback[q.id] ? sub.feedback[q.id].note : '';
-
-                    essayHtml += `
-                        <div class="bg-slate-900 p-4 rounded-xl border border-purple-500/20 space-y-2 wrap-safe">
-                            <div class="flex justify-between font-bold text-white wrap-safe">
-                                <span class="wrap-safe">مقالي (${qIdx + 1}): ${q.text}</span>
-                                <span class="text-amber-400 flex-shrink-0">الدرجة العظمى: ${q.points}</span>
-                            </div>
-                            <div class="text-purple-200 bg-slate-950 p-3 rounded-lg wrap-safe"><strong>إجابة الطالب:</strong> ${studentAns}</div>
-                            ${q.explanation ? `<div class="text-blue-300 bg-blue-950/40 p-3 rounded-lg wrap-safe"><strong>نموذج الإجابة الاسترشادي:</strong> ${q.explanation}</div>` : ''}
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
-                                <div>
-                                    <label class="block text-xs text-purple-300 mb-1">الدرجة المستحقة:</label>
-                                    <input type="number" step="0.5" min="0" max="${q.points}" id="egrade_${sub.id}_${q.id}" value="${curScore}" class="w-full bg-slate-800 border p-2 rounded text-white font-bold text-amber-400 text-center">
-                                </div>
-                                <div class="sm:col-span-2">
-                                    <label class="block text-xs text-purple-300 mb-1">ملحوظة مس رشا:</label>
-                                    <input type="text" id="enote_${sub.id}_${q.id}" value="${curNote}" placeholder="تعليق للطالب..." class="w-full bg-slate-800 border p-2 rounded text-white">
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                const card = document.createElement('div');
-                card.className = 'bg-slate-800 p-5 rounded-2xl border border-purple-500/30 space-y-3';
-                card.innerHTML = `
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <h4 class="font-bold text-white">${sub.studentName}</h4>
-                        <span class="${sub.graded ? 'text-emerald-400' : 'text-amber-400'}">${sub.graded ? 'تم التصحيح' : 'بانتظار التصحيح'}</span>
-                    </div>
-                    ${essayHtml}
-                    <div class="text-left pt-2">
-                        <button type="button" onclick="saveEssayGrading('${sub.id}')" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-5 py-2 rounded-xl text-xs cursor-pointer shadow-lg">حفظ ونشر النتيجة للطالب</button>
-                    </div>
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-white wrap-safe">${sub.studentName}</td>
+                    <td class="p-3 font-mono text-slate-400 text-[11px]">${sub.dateTime}</td>
+                    <td class="p-3"><span class="${sub.graded ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}">${sub.graded ? 'تم التصحيح (' + sub.totalEarned + '/' + sub.maxTotal + ')' : 'بانتظار التصحيح'}</span></td>
+                    <td class="p-3">
+                        <button type="button" onclick="openGradeModal('${sub.id}')" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 py-1.5 rounded-xl text-xs shadow cursor-pointer">
+                            <i class="fa-solid fa-pen-to-square ml-1"></i> عرض وتصحيح الإجابة
+                        </button>
+                    </td>
                 `;
-                container.appendChild(card);
+                container.appendChild(tr);
             });
         }
 
-        async function saveEssayGrading(subId) {
+        function openGradeModal(subId) {
+            const sub = DB.essaySubmissions.find(s => s.id === subId);
+            if (!sub) return;
+
+            document.getElementById('grade-modal-student-name').innerText = `تصحيح إجابات الطالب: ${sub.studentName}`;
+            const contentDiv = document.getElementById('grade-modal-content');
+            contentDiv.innerHTML = '';
+
+            DB.questions.filter(q => q.type === 'essay').forEach((q, qIdx) => {
+                const studentAns = sub.answers[q.id] || 'لم تتم الإجابة';
+                const curScore = sub.feedback && sub.feedback[q.id] ? sub.feedback[q.id].score : '';
+                const curNote = sub.feedback && sub.feedback[q.id] ? sub.feedback[q.id].note : '';
+
+                const div = document.createElement('div');
+                div.className = 'bg-slate-900 p-4 rounded-xl border border-purple-500/20 space-y-2 wrap-safe';
+                div.innerHTML = `
+                    <div class="flex justify-between font-bold text-white wrap-safe">
+                        <span class="wrap-safe">مقالي (${qIdx + 1}): ${cleanQuestionTextDisplay(q.text)}</span>
+                        <span class="text-amber-400 flex-shrink-0">الدرجة العظمى: ${q.points}</span>
+                    </div>
+                    <div class="text-purple-200 bg-slate-950 p-3 rounded-lg wrap-safe"><strong>إجابة الطالب:</strong> ${studentAns}</div>
+                    ${q.explanation ? `<div class="text-blue-300 bg-blue-950/40 p-3 rounded-lg wrap-safe"><strong>نموذج الإجابة:</strong> ${q.explanation}</div>` : ''}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                        <div>
+                            <label class="block text-xs text-purple-300 mb-1">الدرجة المستحقة:</label>
+                            <input type="number" step="0.5" min="0" max="${q.points}" id="modal_egrade_${q.id}" value="${curScore}" class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white font-bold text-amber-400 text-center">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs text-purple-300 mb-1">ملحوظة مس رشا:</label>
+                            <input type="text" id="modal_enote_${q.id}" value="${curNote}" placeholder="تعليق للطالب..." class="w-full bg-slate-800 border border-slate-700 p-2 rounded text-white">
+                        </div>
+                    </div>
+                `;
+                contentDiv.appendChild(div);
+            });
+
+            document.getElementById('grade-modal-save-btn').onclick = function() {
+                saveModalEssayGrading(subId);
+            };
+
+            document.getElementById('modal-grade-essay').classList.remove('hidden');
+        }
+
+        function closeGradeModal() {
+            document.getElementById('modal-grade-essay').classList.add('hidden');
+        }
+
+        async function saveModalEssayGrading(subId) {
             const sub = DB.essaySubmissions.find(x => x.id === subId);
             if (!sub) return;
 
             let totalEarned = 0;
             let feedback = {};
             DB.questions.filter(q => q.type === 'essay').forEach(q => {
-                const scoreVal = parseFloat(document.getElementById(`egrade_${subId}_${q.id}`).value) || 0;
-                const noteVal = document.getElementById(`enote_${subId}_${q.id}`).value.trim();
+                const scoreVal = parseFloat(document.getElementById(`modal_egrade_${q.id}`).value) || 0;
+                const noteVal = document.getElementById(`modal_enote_${q.id}`).value.trim();
                 totalEarned += scoreVal;
                 feedback[q.id] = { score: scoreVal, note: noteVal || 'ممتاز.' };
             });
@@ -1932,6 +1942,7 @@
             sub.totalEarned = totalEarned;
             sub.feedback = feedback;
             await saveDatabase();
+            closeGradeModal();
             renderAdminGrading();
             showToast('تم حفظ ونشر تصحيح المقالي بنجاح!', 'fa-check');
         }
@@ -2028,7 +2039,7 @@
                     <td class="p-2.5 font-bold text-white wrap-safe">${s.name}</td>
                     <td class="p-2.5 text-emerald-300">أتم الاختبار بنجاح</td>
                     <td class="p-2.5 text-slate-400 font-mono text-[11px]">مكتمل</td>
-                    <td class="p-2.5"><button type="button" onclick="resetStudentSubmission('${s.id}')" class="bg-red-600/30 text-red-300 border border-red-500/40 px-3 py-1 rounded-lg text-xs font-bold hover:bg-red-600/50 cursor-pointer">مسح تسليمه والسماح بالإعادة</button></td>
+                    <td class="p-2.5"><button type="button" onclick="resetStudentSubmission('${s.id}')" class="bg-red-600/30 text-red-300 border border-purple-500/40 px-3 py-1 rounded-lg text-xs font-bold hover:bg-red-600/50 cursor-pointer">مسح تسليمه والسماح بالإعادة</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -2064,7 +2075,7 @@
                     <td class="p-2.5 text-slate-400">${r.correctCount} صح / ${r.wrongCount} خطأ</td>
                     <td class="p-2.5 text-slate-400 font-mono text-[11px]">${r.dateTime}</td>
                     <td class="p-2.5 flex items-center gap-2">
-                        <button type="button" onclick='displayResultScreen(${JSON.stringify(r)})' class="text-purple-300 hover:text-purple-200 underline text-xs cursor-pointer">عرض</button>
+                        <button type="button" onclick='displayComprehensiveStudentResult(${JSON.stringify(r)}, ${JSON.stringify(DB.essaySubmissions ? DB.essaySubmissions.find(sub => sub.studentId === r.studentId) : null)})' class="text-purple-300 hover:text-purple-200 underline text-xs cursor-pointer">عرض</button>
                         <span class="text-slate-600">|</span>
                         <button type="button" onclick="deleteSingleResult(${actualIndex})" class="text-red-400 hover:text-red-300 text-xs font-semibold px-2 py-1 rounded bg-red-500/10 cursor-pointer">حذف</button>
                     </td>
