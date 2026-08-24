@@ -1039,7 +1039,7 @@
             currentStudent = { id: 'preview_id', name: 'معاينة تجريبية (المدير)' };
 
             const previewQuestions = DB.questions.map((q, idx) => {
-                let optionsList = Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ['صواب', 'خطأ'];
+                let optionsList = Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ['صح', 'خطأ'];
                 let correctIdx = typeof q.correct === 'number' ? q.correct : 0;
                 return {
                     questionId: q.id || `q_preview_${idx}`,
@@ -1075,7 +1075,7 @@
 
         function getQuestionTypeBadge(q) {
             if (q.type === 'true_false') {
-                return { label: '<i class="fa-solid fa-check-double ml-1"></i> صواب أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
+                return { label: '<i class="fa-solid fa-check-double ml-1"></i> صح أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
             } else if (q.type === 'correct_error') {
                 return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب الخطأ', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
             } else if (q.type === 'complete') {
@@ -1456,7 +1456,7 @@
             
             if (type === 'true_false') {
                 wrap.classList.add('hidden');
-                sel.innerHTML = '<option value="0">عبارة صحيحة</option><option value="1">عبارة خاطئة</option>';
+                sel.innerHTML = '<option value="0">صح</option><option value="1">خطأ</option>';
             } else {
                 wrap.classList.remove('hidden');
                 sel.innerHTML = '<option value="0">الخيار 1 (أ)</option><option value="1">الخيار 2 (ب)</option><option value="2">الخيار 3 (ج)</option><option value="3">الخيار 4 (د)</option>';
