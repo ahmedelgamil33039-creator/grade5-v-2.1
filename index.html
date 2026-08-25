@@ -433,7 +433,7 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center bg-slate-900/60 p-3 rounded-2xl border border-purple-500/20">
                             <h4 class="font-bold text-sm text-purple-200">الأسئلة الحالية (<span id="admin-q-count">0</span>)</h4>
-                            <button type="button" onclick="clearAllQuestions()" class="bg-red-600/30 hover:bg-red-600 text-red-200 border border-red-500/40 font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md">
+                            <button type="button" onclick="clearAllQuestions()" class="bg-red-600/30 hover:bg-red-600 text-red-200 border border-purple-500/40 font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5 shadow-md">
                                 <i class="fa-solid fa-trash-can"></i> حذف جميع الأسئلة
                             </button>
                         </div>
@@ -445,11 +445,11 @@
                 <div id="admin-tab-bulk" class="admin-tab-content space-y-4 hidden text-right">
                     <div class="bg-slate-900/80 p-4 rounded-2xl border border-purple-500/30 space-y-3">
                         <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-layer-group ml-1"></i> استيراد الأسئلة الجماعي الذكي (موضوعي ومقالي)</h4>
+                            <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-layer-group ml-1"></i> استيراد الأسئلة الجماعي الذكي (نظام الكتل)</h4>
                         </div>
                         <p class="text-[11px] text-purple-200 leading-relaxed mb-2">
-                            انسخ والصق أسئلتك هنا. الكود سيقرأ العناوين تلقائياً (مثل: ### اختيار من متعدد، ### مقالي) لتحديد نوع السؤال.<br> 
-                            لإضافة أسئلة مقالية استخدم <code class="bg-slate-800 text-amber-300 px-1">### مقالي</code> ثم اكتب السؤال وتحته <code class="bg-slate-800 text-amber-300 px-1">نموذج الإجابة: ...</code> و <code class="bg-slate-800 text-amber-300 px-1">الصورة: ...</code>.
+                            استخدم عناوين الكتل مثل: <code class="bg-slate-800 text-amber-300 px-1">### مقالي</code>، <code class="bg-slate-800 text-amber-300 px-1">### أكمل</code>، <code class="bg-slate-800 text-amber-300 px-1">### صوّب الخطأ</code>، <code class="bg-slate-800 text-amber-300 px-1">### اختيار من متعدد</code>، <code class="bg-slate-800 text-amber-300 px-1">### صح أو خطأ</code>.<br>
+                            كل الأسئلة التي تقع تحت العنوان ستأخذ نفس البادج والنوع بدقة تامة.
                         </p>
                         <textarea id="admin-bulk-input" rows="8" placeholder="### مقالي&#10;سؤال: وضح موقع مصر الجغرافي؟&#10;نموذج الإجابة: تتوسط قارات العالم القديم...&#10;&#10;### اختيار من متعدد&#10;سؤال: عاصمة مصر هي؟&#10;أ) الإسكندرية | ب) القاهرة | ج) أسوان | د) الأقصر&#10;الإجابة: القاهرة&#10;الشرح: لأنها عاصمة الدولة." class="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-xs text-white font-mono"></textarea>
                         <button type="button" onclick="importBulkQuestions()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition cursor-pointer flex items-center gap-2">
@@ -458,7 +458,7 @@
                     </div>
                 </div>
 
-                <!-- TAB 4: MANUAL GRADING FOR ESSAY (MODAL VIEW FOR SPACE SAVING) -->
+                <!-- TAB 4: MANUAL GRADING FOR ESSAY -->
                 <div id="admin-tab-grading" class="admin-tab-content space-y-4 hidden text-right">
                     <div class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-purple-500/30">
                         <h4 class="font-bold text-sm text-purple-300"><i class="fa-solid fa-clipboard-check ml-1"></i> تصحيح إجابات الأسئلة المقالية للطلاب (<span id="pending-grading-count">0</span>)</h4>
@@ -611,7 +611,7 @@
         </div>
     </div>
 
-    <!-- MODAL 4: GRADE ESSAY MODAL (SPACE SAVING) -->
+    <!-- MODAL 4: GRADE ESSAY MODAL -->
     <div id="modal-grade-essay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
         <div class="glass-modal rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 border border-purple-500/40 shadow-2xl text-right">
             <div class="flex justify-between items-center border-b pb-3 border-purple-500/30">
@@ -978,7 +978,6 @@
             if (entered === currentStudent.passcode) {
                 closePasscodeModal();
 
-                // Check if student already submitted (show comprehensive combined results sheet)
                 const objRes = DB.results.find(r => r.studentId === currentStudent.id);
                 const essaySub = DB.essaySubmissions ? DB.essaySubmissions.find(s => s.studentId === currentStudent.id) : null;
 
@@ -996,7 +995,6 @@
             }
         }
 
-        // --- COMPREHENSIVE COMBINED STUDENT RESULT SCREEN ---
         function displayComprehensiveStudentResult(objRes, essaySub) {
             let totalScore = objRes ? objRes.score : 0;
             let totalPossible = objRes ? objRes.totalPoints : 0;
@@ -1035,7 +1033,6 @@
             const breakdown = document.getElementById('result-breakdown');
             breakdown.innerHTML = '';
 
-            // 1. Objective Questions
             if (objRes && objRes.details) {
                 const headerObj = document.createElement('div');
                 headerObj.className = 'font-bold text-purple-300 pt-2 pb-1 text-xs';
@@ -1058,7 +1055,6 @@
                 });
             }
 
-            // 2. Essay Questions
             if (essaySub) {
                 const headerEssay = document.createElement('div');
                 headerEssay.className = 'font-bold text-amber-300 pt-3 pb-1 border-t border-purple-500/30 text-xs';
@@ -1186,11 +1182,11 @@
 
         function getQuestionTypeBadge(q) {
             if (q.type === 'essay') {
-                return { label: '<i class="fa-solid fa-pen-nib ml-1"></i> سؤال مقالي', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
+                return { label: '<i class="fa-solid fa-pen-nib ml-1"></i> مقالي', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
             } else if (q.type === 'true_false') {
                 return { label: '<i class="fa-solid fa-check-double ml-1"></i> صح أو خطأ', classes: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' };
             } else if (q.type === 'correct_error') {
-                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب الخطأ', classes: 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' };
+                return { label: '<i class="fa-solid fa-pen-ruler ml-1"></i> صوّب الخطأ', classes: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40' };
             } else if (q.type === 'complete') {
                 return { label: '<i class="fa-solid fa-pen-to-square ml-1"></i> أكمل العبارات الآتية', classes: 'bg-sky-500/20 text-sky-300 border border-sky-500/40' };
             }
@@ -1742,7 +1738,7 @@
             document.getElementById('admin-q-points').value = '1';
         }
 
-        // --- BULK IMPORT WITH ESSAY SUPPORT ---
+        // --- FIXED BULK IMPORT LOGIC (BLOCK SYSTEM) ---
         async function importBulkQuestions() {
             const rawText = document.getElementById('admin-bulk-input').value;
             if (!rawText.trim()) {
@@ -1772,6 +1768,20 @@
                         options: [],
                         correctText: 'مقالي'
                     });
+                } else if (type === 'true_false') {
+                    let cText = cleanOption(qObj.correctAns);
+                    let isTrue = cText.includes('صح') || cText.includes('صواب') || cText.includes('نعم');
+                    qsArray.push({
+                        id: `q_bulk_tf_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                        type: 'true_false',
+                        text: cleanQText,
+                        options: ['عبارة صحيحة', 'عبارة خاطئة'],
+                        correct: isTrue ? 0 : 1,
+                        correctText: isTrue ? 'عبارة صحيحة' : 'عبارة خاطئة',
+                        points: 1,
+                        image: qObj.image || '',
+                        explanation: qObj.explanation || 'لا يوجد شرح إضافي.'
+                    });
                 } else {
                     let cText = cleanOption(qObj.correctAns);
                     let cIdx = qObj.options.findIndex(o => normalizeMatch(o) === normalizeMatch(cText));
@@ -1780,9 +1790,9 @@
                         id: `q_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
                         type: type,
                         text: cleanQText,
-                        options: qObj.options,
+                        options: qObj.options.length > 0 ? qObj.options : ['بديل 1', 'بديل 2', 'بديل 3', 'بديل 4'],
                         correct: cIdx,
-                        correctText: qObj.options[cIdx] || qObj.options[0],
+                        correctText: qObj.options[cIdx] || qObj.options[0] || 'بديل 1',
                         points: 1,
                         image: qObj.image || '',
                         explanation: qObj.explanation || 'لا يوجد شرح إضافي.'
@@ -1792,11 +1802,15 @@
 
             lines.forEach(line => {
                 const lLower = line.toLowerCase();
-                if (line.includes('مقالي')) currentSectionType = 'essay';
-                else if (line.includes('اختيار من متعدد')) currentSectionType = 'mcq';
-                else if (line.includes('أكمل')) currentSectionType = 'complete';
-                else if (line.includes('صوب')) currentSectionType = 'correct_error';
-                else if (line.includes('صواب')) currentSectionType = 'true_false';
+                
+                if (line.includes('###')) {
+                    if (line.includes('مقالي')) currentSectionType = 'essay';
+                    else if (line.includes('اختيار من متعدد')) currentSectionType = 'mcq';
+                    else if (line.includes('أكمل')) currentSectionType = 'complete';
+                    else if (line.includes('صوّب') || line.includes('صوب')) currentSectionType = 'correct_error';
+                    else if (line.includes('صواب أو خطأ') || line.includes('صح أو خطأ') || line.includes('صح وخطأ')) currentSectionType = 'true_false';
+                    return;
+                }
 
                 if (lLower.startsWith('سؤال') || /^\d+[\-\.\)]\s+/.test(line)) {
                     if (currentQ) finalizeAndPush(currentQ, newQs, currentSectionType);
@@ -1810,6 +1824,16 @@
                             currentQ.image = line.replace(/^(الصورة|رابط)\s*[:\-]\s*/i, '').trim();
                         } else if (/^الدرجة\s*[:\-]/i.test(line)) {
                             currentQ.points = parseInt(line.replace(/^الدرجة\s*[:\-]\s*/i, '')) || 5;
+                        } else {
+                            currentQ.text += ' ' + line;
+                        }
+                    } else if (currentSectionType === 'true_false') {
+                        if (lLower.startsWith('الإجابة') || lLower.startsWith('الاجابة')) {
+                            currentQ.correctAns = line.replace(/^(الإجابة|الاجابة)\s*[:\-]?\s*/i, '').trim();
+                        } else if (lLower.startsWith('الشرح')) {
+                            currentQ.explanation = line.replace(/^الشرح\s*[:\-]?\s*/i, '').trim();
+                        } else if (lLower.startsWith('صورة')) {
+                            currentQ.image = line.replace(/^صورة\s*[:\-]?\s*/i, '').trim();
                         } else {
                             currentQ.text += ' ' + line;
                         }
@@ -1847,7 +1871,7 @@
             }
         }
 
-        // --- MANUAL ESSAY GRADING IN ADMIN (MODAL VIEW FOR SPACE SAVING) ---
+        // --- MANUAL ESSAY GRADING IN ADMIN (MODAL VIEW) ---
         function renderAdminGrading() {
             const container = document.getElementById('admin-grading-tbody');
             if (!container) return;
